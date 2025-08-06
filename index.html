@@ -302,48 +302,114 @@
         };
 
         // Configurar o input de comando
-        const commandInput = document.getElementById('command-input');
-        commandInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const command = this.value.toLowerCase().trim();
-                this.value = '';
+const commandInput = document.getElementById('command-input');
+commandInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        const command = this.value.toLowerCase().trim();
+        this.value = '';
+        
+        // Adiciona histórico de comandos
+        addToCommandHistory(command);
+        
+        // Exibe o comando no terminal com estilo diferente
+        addTerminalOutput(`<div class="command-line"><span class="prompt">></span> ${command}</div>`);
+        
+        if (commands[command]) {
+            if (commands[command].card) {
+                // Esconder todos os cards primeiro
+                document.querySelectorAll('.site-card').forEach(card => {
+                    card.classList.remove('active');
+                });
                 
-                addTerminalOutput(`<div><span style="color: #69F0AE;">></span> ${command}</div>`);
+                // Mostrar mensagem no terminal
+                addTerminalOutput(`<div class="system-message">${commands[command].message}</div>`);
                 
-                if (commands[command]) {
-                    if (commands[command].card) {
-                        // Esconder todos os cards primeiro
-                        document.querySelectorAll('.site-card').forEach(card => {
-                            card.classList.remove('active');
-                        });
-                        
-                        // Mostrar mensagem no terminal
-                        addTerminalOutput(commands[command].message);
-                        
-                        // Mostrar o card correspondente
-                        document.getElementById(commands[command].card).classList.add('active');
-                    } else if (commands[command].action) {
-                        commands[command].action();
-                    }
-                } else {
-                    addTerminalOutput(`Comando não reconhecido: "${command}". Digite "ajuda" para ver os comandos disponíveis.`);
+                // Mostrar o card correspondente
+                const card = document.getElementById(commands[command].card);
+                if (card) {
+                    card.classList.add('active');
+                    // Rolar para o card se estiver visível
+                    card.scrollIntoView({ behavior: 'smooth' });
                 }
+            } else if (commands[command].action) {
+                commands[command].action();
             }
-        });
-
-        // Função para adicionar texto ao terminal
-        function addTerminalOutput(text) {
-            const terminalOutput = document.getElementById('terminal-output');
-            const newElement = document.createElement('div');
-            newElement.innerHTML = text;
-            terminalOutput.appendChild(newElement);
-            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        } else {
+            addTerminalOutput(`<div class="error-message">Comando não reconhecido: "${command}". Digite "ajuda" para ver os comandos disponíveis.</div>`);
         }
+    }
+});
 
-        // Focar no input quando a página carregar
-        window.onload = function() {
-            commandInput.focus();
-        };
-    </script>
-</body>
-</html>
+// Suporte para histórico de comandos (seta para cima/baixo)
+let commandHistory = [];
+let historyIndex = -1;
+
+function addToCommandHistory(command) {
+    if (command && (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== command)) {
+        commandHistory.push(command);
+    }
+    historyIndex = commandHistory.length;
+}
+
+commandInput.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp' && commandHistory.length > 0) {
+        e.preventDefault();
+        if (historyIndex > 0) historyIndex--;
+        this.value = commandHistory[historyIndex];
+    } else if (e.key === 'ArrowDown' && commandHistory.length > 0) {
+        e.preventDefault();
+        if (historyIndex < commandHistory.length - 1) {
+            historyIndex++;
+            this.value = commandHistory[historyIndex];
+        } else {
+            historyIndex = commandHistory.length;
+            this.value = '';
+        }
+    }
+});
+
+// Função para adicionar texto ao terminal com suporte a diferentes tipos de mensagens
+function addTerminalOutput(text, type = 'normal') {
+    const terminalOutput = document.getElementById('terminal-output');
+    const newElement = document.createElement('div');
+    
+    // Adiciona classe baseada no tipo de mensagem
+    switch(type) {
+        case 'command':
+            newElement.className = 'command-line';
+            break;
+        case 'error':
+            newElement.className = 'error-message';
+            break;
+        case 'system':
+            newElement.className = 'system-message';
+            break;
+        default:
+            newElement.className = 'normal-message';
+    }
+    
+    newElement.innerHTML = text;
+    terminalOutput.appendChild(newElement);
+    
+    // Limita o número de linhas no terminal para evitar sobrecarga
+    const maxLines = 100;
+    const lines = terminalOutput.children;
+    if (lines.length > maxLines) {
+        terminalOutput.removeChild(lines[0]);
+    }
+    
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+// Focar no input quando a página carregar e manter foco após comandos
+window.onload = function() {
+    commandInput.focus();
+    
+    // Mensagem de boas-vindas inicial
+    addTerminalOutput('<div class="system-message">Bem-vindo ao terminal interativo! Digite "ajuda" para ver os comandos disponíveis.</div>');
+};
+
+// Mantém o foco no input mesmo quando clicamos no terminal
+document.getElementById('terminal-output').addEventListener('click', function() {
+    commandInput.focus();
+});
