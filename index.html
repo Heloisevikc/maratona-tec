@@ -302,313 +302,48 @@
         };
 
         // Configurar o input de comando
-const commandInput = document.getElementById('command-input');
-commandInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        const command = this.value.toLowerCase().trim();
-        this.value = '';
-        
-        // Adiciona histórico de comandos
-        addToCommandHistory(command);
-        
-        // Exibe o comando no terminal com estilo diferente
-        addTerminalOutput(`<div class="command-line"><span class="prompt">></span> ${command}</div>`);
-        
-        if (commands[command]) {
-            if (commands[command].card) {
-                // Esconder todos os cards primeiro
-                document.querySelectorAll('.site-card').forEach(card => {
-                    card.classList.remove('active');
-                });
-                
-                // Mostrar mensagem no terminal
-                addTerminalOutput(`<div class="system-message">${commands[command].message}</div>`);
-                
-                // Mostrar o card correspondente
-                const card = document.getElementById(commands[command].card);
-                if (card) {
-                    card.classList.add('active');
-                    // Rolar para o card se estiver visível
-                    card.scrollIntoView({ behavior: 'smooth' });
-                }
-            } else if (commands[command].action) {
-                commands[command].action();
-            }
-        } else {
-            addTerminalOutput(`<div class="error-message">Comando não reconhecido: "${command}". Digite "ajuda" para ver os comandos disponíveis.</div>`);
-        }
-    }
-});
-
-// Terminal Interativo Avançado
-class InteractiveTerminal {
-    constructor() {
-        // Configurações
-        this.config = {
-            maxLines: 150,
-            prompt: 'user@terminal:~$',
-            promptColor: '#4CAF50',
-            welcomeMessage: 'Bem-vindo ao Terminal Interativo Avançado\nDigite "help" para ver os comandos disponíveis\nDigite "clear" para limpar o terminal',
-            themes: {
-                dark: {
-                    background: '#121212',
-                    text: '#e0e0e0',
-                    prompt: '#4CAF50',
-                    error: '#F44336',
-                    success: '#8BC34A'
-                },
-                light: {
-                    background: '#f5f5f5',
-                    text: '#212121',
-                    prompt: '#2196F3',
-                    error: '#FF5252',
-                    success: '#4CAF50'
-                }
-            }
-        };
-
-        // Elementos DOM
-        this.elements = {
-            input: document.getElementById('command-input'),
-            output: document.getElementById('terminal-output'),
-            container: document.querySelector('.terminal-container')
-        };
-
-        // Estado
-        this.state = {
-            history: [],
-            historyIndex: -1,
-            currentTheme: 'dark',
-            commands: {},
-            initialized: false
-        };
-
-        // Inicialização
-        this.init();
-    }
-
-    init() {
-        if (this.state.initialized) return;
-        
-        this.setupEventListeners();
-        this.applyTheme(this.state.currentTheme);
-        this.focusInput();
-        this.displayWelcome();
-        this.registerCoreCommands();
-        
-        this.state.initialized = true;
-    }
-
-    setupEventListeners() {
-        // Evento de input
-        this.elements.input.addEventListener('keydown', (e) => {
+        const commandInput = document.getElementById('command-input');
+        commandInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                this.processCommand(this.elements.input.value.trim());
-                this.elements.input.value = '';
-            } else if (e.key === 'ArrowUp') {
-                this.navigateHistory(-1);
-                e.preventDefault();
-            } else if (e.key === 'ArrowDown') {
-                this.navigateHistory(1);
-                e.preventDefault();
-            } else if (e.key === 'Tab') {
-                this.handleTabCompletion();
-                e.preventDefault();
+                const command = this.value.toLowerCase().trim();
+                this.value = '';
+                
+                addTerminalOutput(`<div><span style="color: #69F0AE;">></span> ${command}</div>`);
+                
+                if (commands[command]) {
+                    if (commands[command].card) {
+                        // Esconder todos os cards primeiro
+                        document.querySelectorAll('.site-card').forEach(card => {
+                            card.classList.remove('active');
+                        });
+                        
+                        // Mostrar mensagem no terminal
+                        addTerminalOutput(commands[command].message);
+                        
+                        // Mostrar o card correspondente
+                        document.getElementById(commands[command].card).classList.add('active');
+                    } else if (commands[command].action) {
+                        commands[command].action();
+                    }
+                } else {
+                    addTerminalOutput(`Comando não reconhecido: "${command}". Digite "ajuda" para ver os comandos disponíveis.`);
+                }
             }
         });
 
-        // Click no output mantém foco no input
-        this.elements.output.addEventListener('click', () => this.focusInput());
-    }
-
-    processCommand(rawCommand) {
-        if (!rawCommand) return;
-        
-        // Adiciona ao histórico
-        this.addToHistory(rawCommand);
-        
-        // Exibe o comando no terminal
-        this.displayCommand(rawCommand);
-        
-        // Processa o comando
-        const [command, ...args] = rawCommand.split(' ');
-        const cmd = command.toLowerCase();
-        
-        if (this.state.commands[cmd]) {
-            try {
-                this.state.commands[cmd].execute(args);
-            } catch (error) {
-                this.displayError(`Erro ao executar "${cmd}": ${error.message}`);
-            }
-        } else {
-            this.displayError(`Comando não encontrado: "${cmd}"`);
-            this.displayMessage('Digite "help" para ver os comandos disponíveis', 'system');
+        // Função para adicionar texto ao terminal
+        function addTerminalOutput(text) {
+            const terminalOutput = document.getElementById('terminal-output');
+            const newElement = document.createElement('div');
+            newElement.innerHTML = text;
+            terminalOutput.appendChild(newElement);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
         }
-    }
 
-    registerCommand(name, description, execute, options = {}) {
-        this.state.commands[name.toLowerCase()] = {
-            description,
-            execute,
-            ...options
+        // Focar no input quando a página carregar
+        window.onload = function() {
+            commandInput.focus();
         };
-    }
-
-    registerCoreCommands() {
-        // Comando help
-        this.registerCommand('help', 'Mostra esta mensagem de ajuda', () => {
-            let helpText = '<div class="terminal-help">';
-            helpText += '<h3>Comandos disponíveis:</h3><ul>';
-            
-            Object.entries(this.state.commands).forEach(([cmd, {description}]) => {
-                helpText += `<li><strong>${cmd}</strong> - ${description}</li>`;
-            });
-            
-            helpText += '</ul></div>';
-            this.displayMessage(helpText, 'system');
-        });
-
-        // Comando clear
-        this.registerCommand('clear', 'Limpa o terminal', () => {
-            this.elements.output.innerHTML = '';
-        });
-
-        // Comando theme
-        this.registerCommand('theme', 'Muda o tema (dark/light)', (args) => {
-            const theme = args[0] || 'dark';
-            if (this.config.themes[theme]) {
-                this.applyTheme(theme);
-                this.displayMessage(`Tema alterado para: ${theme}`, 'success');
-            } else {
-                this.displayError(`Tema inválido. Opções: ${Object.keys(this.config.themes).join(', ')}`);
-            }
-        });
-
-        // Comando echo
-        this.registerCommand('echo', 'Repete a mensagem digitada', (args) => {
-            this.displayMessage(args.join(' '), 'normal');
-        });
-    }
-
-    // Funções de exibição
-    displayCommand(command) {
-        this.addOutputLine(`<span class="prompt">${this.config.prompt}</span> ${command}`, 'command');
-    }
-
-    displayMessage(message, type = 'normal') {
-        this.addOutputLine(message, type);
-    }
-
-    displayError(message) {
-        this.addOutputLine(message, 'error');
-    }
-
-    displaySuccess(message) {
-        this.addOutputLine(message, 'success');
-    }
-
-    displayWelcome() {
-        this.displayMessage(this.config.welcomeMessage, 'system');
-    }
-
-    addOutputLine(content, type = 'normal') {
-        const line = document.createElement('div');
-        line.className = `terminal-line terminal-${type}`;
-        line.innerHTML = content;
-        
-        this.elements.output.appendChild(line);
-        
-        // Limita o número de linhas
-        while (this.elements.output.children.length > this.config.maxLines) {
-            this.elements.output.removeChild(this.elements.output.firstChild);
-        }
-        
-        // Scroll automático
-        this.elements.output.scrollTop = this.elements.output.scrollHeight;
-    }
-
-    // Funções auxiliares
-    addToHistory(command) {
-        if (command && (!this.state.history.length || this.state.history[this.state.history.length - 1] !== command)) {
-            this.state.history.push(command);
-        }
-        this.state.historyIndex = this.state.history.length;
-    }
-
-    navigateHistory(direction) {
-        if (this.state.history.length === 0) return;
-        
-        if (direction < 0 && this.state.historyIndex > 0) {
-            this.state.historyIndex--;
-        } else if (direction > 0 && this.state.historyIndex < this.state.history.length - 1) {
-            this.state.historyIndex++;
-        } else if (direction > 0) {
-            this.state.historyIndex = this.state.history.length;
-            this.elements.input.value = '';
-            return;
-        }
-        
-        this.elements.input.value = this.state.history[this.state.historyIndex];
-    }
-
-    handleTabCompletion() {
-        const input = this.elements.input.value.toLowerCase();
-        if (!input) return;
-        
-        const matches = Object.keys(this.state.commands).filter(cmd => 
-            cmd.startsWith(input)
-        );
-        
-        if (matches.length === 1) {
-            this.elements.input.value = matches[0];
-        } else if (matches.length > 1) {
-            this.displayMessage(`Comandos possíveis: ${matches.join(', ')}`, 'system');
-        }
-    }
-
-    applyTheme(theme) {
-        this.state.currentTheme = theme;
-        const colors = this.config.themes[theme];
-        
-        document.documentElement.style.setProperty('--bg-color', colors.background);
-        document.documentElement.style.setProperty('--text-color', colors.text);
-        document.documentElement.style.setProperty('--prompt-color', colors.prompt);
-        document.documentElement.style.setProperty('--error-color', colors.error);
-        document.documentElement.style.setProperty('--success-color', colors.success);
-    }
-
-    focusInput() {
-        this.elements.input.focus();
-    }
-}
-
-// Inicializa o terminal quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
-    const terminal = new InteractiveTerminal();
-    
-    // Exemplo: Registrar comandos personalizados
-    terminal.registerCommand('card', 'Mostra um card específico', (args) => {
-        const cardId = args[0];
-        if (cardId) {
-            // Esconder todos os cards primeiro
-            document.querySelectorAll('.site-card').forEach(card => {
-                card.classList.remove('active');
-            });
-            
-            // Mostrar o card correspondente
-            const card = document.getElementById(cardId);
-            if (card) {
-                card.classList.add('active');
-                card.scrollIntoView({ behavior: 'smooth' });
-                terminal.displaySuccess(`Card "${cardId}" mostrado com sucesso`);
-            } else {
-                terminal.displayError(`Card não encontrado: "${cardId}"`);
-            }
-        } else {
-            terminal.displayError('Por favor, especifique um card (ex: "card sobre")');
-        }
-    });
-    
-    // Adiciona ao escopo global para acesso externo
-    window.Terminal = terminal;
-});
+    </script>
+</body>
+</html>
